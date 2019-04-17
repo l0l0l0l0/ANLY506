@@ -1,0 +1,64 @@
+---
+title: "Visualization"
+author: "EB"
+date: "April 14, 2019"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## More generic stuff
+
+What I found useful in exploratory data analysis.
+
+```{r}
+
+#Multiple charts arranged in facets
+
+plot1 <- plot0 + facet_grid(var1 ~ var2)  # arrange in a grid
+#facet_wrap(~variable) gives a symmetrical matrix of plots for the number of levels of variable;
+#facet_grid(.~variable) produces facets equal to the levels of variable distributed horizontally.
+#facet_grid(variable~.) will return facets equal to the levels of variable distributed vertically.
+plot2 <- plot0 + facet_wrap(var1 ~ var2)  # free the x and y axis scales.
+#facet_wrap(x ~ y) - displays only the plots that have actual values.
+```
+
+## Color usage
+
+What I learned is that color is important.
+
+```{r}
+
+library(RColorBrewer) # Palettes that follow color usage guidelines. They are nice.
+display.brewer.all() # See all  associated palettes.
+
+
+library(viridis) # From description: These palettes are designed in such a way that they will analytically be perfectly perceptually-uniform, both in regular form and also when converted to black-and-white. They are also designed to be perceived by readers with the most common form of color blindness.
+library(hexbin)
+
+ggplot(data.frame(x = rnorm(10000), y = rnorm(10000)), aes(x = x, y = y)) +
+  geom_hex() +
+  coord_fixed() +
+  scale_fill_viridis() +
+  theme_bw()  # Sample viz that shows viridis palette - very nicely looking
+
+```
+
+## Gapminder sample viz
+
+Using pipe process in creating exploratory viz
+
+```{r}
+library(gapminder)
+
+asia.07 <- gapminder %>% filter(year == 2007, continent == "Asia") #Filtering gapminder dataset to focus on a particular regional data (Asia) in a particular year (2007)
+ggplot(asia.07, aes(x = lifeExp, y = country)) +  geom_point() #Mapping life expectancy as independent variable, country as dependent. Then plotting a scatterplot 
+ggplot(asia.07, aes(x = lifeExp, y = fct_reorder(country, lifeExp))) + geom_point() # SAme as above, but now neatly ordered by life expectancy 
+
+```
+
+
+

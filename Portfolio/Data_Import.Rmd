@@ -1,0 +1,89 @@
+---
+title: "Import"
+author: "EB"
+date: "April 14, 2019"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Reading different filetypes
+
+This is a list of commands to make R read various types of datafiles
+
+```{r}
+
+library(readr)
+
+# Reading CSV file directly
+mydata1 <- read.csv("c:/data/mydatafile.csv",header = TRUE)
+# Open window to search for *.csv
+mydata2 <- read.csv(file.choose(), header = TRUE)
+#Read Semi-colon Delimited files
+mydata3 <- read.csv2("file2.csv", header = TRUE)
+#Read files with any delim
+mydata4 <- read.delim("file.txt", delim = "|")
+#Read fixed width file
+mydata5 <- read.fwf("file.xxx", col_positions = c(1, 3, 5))
+#Tab delim files
+mydata6 <- read.table("file.xxx")
+#Read Excel files
+mydata7 <- readxl("file.xlsx")
+```
+
+## Exploring data as it is
+
+A few most basic functions that I always forget. Allow you to look into your data and understand its structure
+
+```{r}
+# Provides the structure of the dataset
+str(mydata)
+# Provides basic descriptive statistics and frequencies
+summary(mydata)
+# Lists variables in the dataset
+names(mydata)
+# First 6 rows of dataset
+head(mydata)
+# First 10 rows of dataset. If (n = -10) then all rows but last 10
+head(mydata, n=10)
+# Last 6 rows, same trick with (n = X) applies
+tail(mydata) 
+# First 10 rows of data
+mydata[1:10, ]
+# First 10 rows of data of the first 3 variables - like 2D matrix
+mydata[1:10,1:3]
+# View raw data - seems to require dplyr library
+View(mydata)
+# Sort dataframe by column Y in descending order
+mydata[order(mydata$Y), decreasing = TRUE]
+# Number of rows in the dataset
+nrow(mydata)
+# Number of columns in the dataset
+ncol(mydata)
+
+```
+
+
+## DPLYR
+
+Dplyr is a versatile package that allows you to do analysis quickly. It is useful for creating tables of summary statistics across specific groups of data. 
+
+
+```{r}
+
+library(dplyr)
+
+# Goto template for using dplyr
+mydata %>%   # Original dataframe to work with. Funny %>% passes object on the left as argument of a function on the right
+  filter(X > 30) %>%  # Applying filter 
+  group_by(Y, Z) %>%  # Grouping variables
+  summarise(
+    a = mean(col.a),       # calculate mean of column col.a in my.df
+    b = sd(col.b),         # calculate sd of column col.b in my.df
+    c = max(col.c))        # calculate max on column col.c in my.df, ...
+
+```
+
+

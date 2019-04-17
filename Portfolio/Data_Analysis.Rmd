@@ -1,0 +1,87 @@
+---
+title: "Analysis"
+author: "EB"
+date: "April 14, 2019"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Marimekko chart function
+
+I suffered thru this function in the GGPlot course on DataCamp, but it was worth the effort - this is an awesome visualization of two or more qualitative variables that presents a lot of information in a digestable way. The area of the tiles (bin size) is proportional to the number of observations within that category. It just belongs to a code portfolio, as it covers several useful and very applicable topics.
+
+```{r}
+
+# Required libraries
+library(ggthemes)
+library(reshape2)
+library(dplyr)
+
+#====Function body==============
+function(data, X, FILL) {
+  # Proportions in raw data
+  DF <- as.data.frame.matrix(table(data[[X]], data[[FILL]])) # The initial contingency table
+  DF$groupSum <- rowSums(DF) # Create groupSum, xmax and xmin columns
+  DF$xmax <- cumsum(DF$groupSum)
+  DF$xmin <- DF$xmax - DF$groupSum
+  DF$X <- row.names(DF) # Copy row names to variable X
+  DF$groupSum <- NULL # The groupSum column is no longer needed
+  DF_melted <- melt(DF, id = c("X", "xmin", "xmax"), variable.name = "FILL") # Melt the dataset
+  DF_melted <- DF_melted %>%   # dplyr call to calculate ymin and ymax
+    group_by(X) %>%
+    mutate(ymax = cumsum(value/sum(value)),
+           ymin = ymax - value/sum(value))
+
+  # Chi-sq test
+  results <- chisq.test(table(data[[FILL]], data[[X]])) # fill and then x
+  resid <- melt(results$residuals)
+  names(resid) <- c("FILL", "X", "residual")
+
+  # Merge data
+  DF_all <- merge(DF_melted, resid)
+
+  # Positions for labels (for both X and Y axes)
+  DF_all$xposn <- DF_all$xmin + (DF_all$xmax - DF_all$xmin)/2
+  index <- DF_all$xmax == max(DF_all$xmax)
+  DF_all$yposn <- DF_all$ymin[index] + (DF_all$ymax[index] - DF_all$ymin[index])/2
+
+  # Plotting rectangles of different width and length
+  g <- ggplot(DF_all, aes(ymin = ymin,  ymax = ymax, xmin = xmin,
+                          xmax = xmax, fill = residual)) +
+  geom_rect(col = "white") +
+  geom_text(aes(x = xposn, label = X),
+            y = 1, size = 3, angle = 90, hjust = 1, show.legend = FALSE) +
+  geom_text(aes(x = max(xmax),  y = yposn, label = FILL),
+            size = 3, hjust = 1, show.legend = FALSE) +
+  scale_fill_gradient2("Residuals") +
+  scale_x_continuous("Individuals", expand = c(0,0)) +
+  scale_y_continuous("Proportion", expand = c(0,0)) +
+  theme_tufte() + #Minimalistic theme in agreement with Tufte guidelines
+  theme(legend.position = "bottom")
+  print(g)
+}
+
+```
+
+
+## Clustering
+
+A few reminders about clustering. Not too much into it yet though.
+
+```{r}
+
+library(tidyverse)
+library(cluster)    # Clustering algorithms
+library(factoextra) # Clustering algorithms + visualization
+
+get_dist(mydata, method = "euclidian") # Compute a distance matrix between the rows of a data matrix
+fviz_dist(get_dist(mydata), gradient = list(low = "blue", mid = "white", high = "red"))  # Visualisation of a distance matrix
+
+
+fviz_nbclust(mydata, kmeans, method = "wss") # "Elbow method" = The total within-cluster sum of square (wss)
+fviz_nbclust(mydata, kmeans, method = "silhouette") # "Silhouette method" = The average silhouette of observations for different values of k
+fviz_gap_stat(gap_stat) # Gap Statistic Method (I'm not sure that I got it)
+```

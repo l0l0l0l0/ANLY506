@@ -1,0 +1,79 @@
+---
+title: "Wrangling"
+author: "EB"
+date: "April 14, 2019"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Tidy Data
+
+There are three rules to ensure a dataset is tidy:
+1. Each variable must have its own column.
+2. Each observation must have its own row.
+3. Each value must have its own cell.
+
+
+In addition to my goto dplyr template (see Data_Import), in the tidyverse most of the functions are defined as action verbs that you can apply to data.
+
+- `filter()` - remove rows according to a criteria
+- `select()` - select columns by name
+- `mutate()` - calculate new column variables by manipulating data
+- `arrange()` - sort data by columns
+
+Tibbles are like frame class, but have three advantages:
+1. Subsetting - `[` always returns a new tibble, `[[` and `$` always return a vector.
+2. No partial matching - You must use full column names when subsetting
+3. Display - When you print a tibble, R provides a concise view of the data that fits on one screen
+
+
+```{r}
+library(tidyverse)
+
+mytibble <- as_tibble(mydata) # Convert data frame to tibble
+mytibble <- tbl_df(mydata) # Seemingly alternative way to make a tibble
+gather(mytibble, "colname1", "colname2", 2:4) # Gather columns into rows (e.g., for datasets where columns are variables). Opposite - spread()
+separate(mytibble, date, c("y", "m", "d")) # Separate one column into several - useful with dates. Opposite - unite()
+
+distinct(mytibble) # Remove duplicate rows
+slice(mytibble, 10:15) # Select rows by position.
+select(mytibble, colname1, colname2, colname3) #Select columns by name or helper function - contains(), ends_with(), matches(regex), start_with(), etc.
+
+drop_na(mytibble) # Drop rows containing NA's
+fill(mytibble, .direction = c("down", "up")) # Fill in NA’s with most recent values.
+replace_na(mytibble, list(x = 5)) # Replace NA’s by column
+
+```
+
+### Summarize data
+
+Basically, `summarise` boils down data to a single row of value. `summarise` uses summary functions, such as:
+  first - First value of a vector;
+  last - Last value of a vector;
+  nth - Nth value of a vector;
+  n - Number of values in a vector;
+  n_distinct - Number of distinct values in a vector;
+  IQR - Interquartille range of a vector;
+  min/max - Minimum/maximum value in a vector;
+  mean/median/var/sd - Mean, median, variance, standard deviation of a vector.
+
+
+```{r}
+summarise(mytibble, avg = mean(colname1))
+```
+
+### New variables
+
+`mutate` Applies functions and/or adds more new columns. `mutate` uses functions that convert one vector of variables into another, such as:
+  lead/lag - Copy with values shifted/lagged by 1;
+  row_number - Ranks. Ties got to first value;
+  between - Checks if values are between x and y;
+  cummean/cumsum/cummax/cummin - Cumulative mean/sum/max/min.
+
+
+```{r}
+mutate(mytibble, new_col = X + Y)
+```
