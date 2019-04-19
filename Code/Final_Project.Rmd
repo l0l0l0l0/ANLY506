@@ -1,0 +1,331 @@
+---
+title: "Final Project"
+author: "EB"
+date: "April 17, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Guthub link
+
+"[Final assignment](https://github.com/l0l0l0l0/ANLY506/tree/master/Code)"
+
+## Data loading
+
+I worked with some of the data from the Gapminder project. Probably should hae figured how to use `wd` function and work around Git, but next time.
+
+```{r}
+
+# Reading CSV file directly
+gm_verbatim <- read.csv("C:/Users/User/Desktop/MyR/Final project/gm.csv")
+```
+
+
+## Libraries
+
+Here goes a list of libraries that I used or the project.
+
+```{r}
+library(ggplot2)   # Graphics package
+library(tidyverse) # Package to follow tidy data concept 
+library(gridExtra) # For nice graph representation
+```
+
+
+## Data intro
+
+The table is tall and almost "tidy":
+
+1. Population column has data only for every 10 years
+2. Values in the population column are recognized as factors
+3. There is some data for a weirdo country that only contains values for 10 years. Population does not seem right too. Most likely will drop these values. 
+4. Potentially, there might be something wrong with "life" data - minimal values start from 1
+5. Income column has 2341 missed values (Population column too has many missed values, but since the column is recognized as factors they weren't count)
+6. Minor annoying issue with names - some columns have capital letters, some don't
+
+
+
+```{r}
+head(gm_verbatim)  # Intro to structure of the data
+str(gm_verbatim)   # Intro to structure of the data
+tail(gm_verbatim, 15) # Some weirdness at the end
+summary(gm_verbatim)  # Basuc descriptive stats
+names(gm_verbatim) # Column names
+sum(is.na(gm_verbatim)) # If there any NA's in numeric data
+sum(is.na(gm_verbatim$Year))
+sum(is.na(gm_verbatim$life))
+sum(is.na(gm_verbatim$income)) # There we go! 2341 NA's
+
+```
+
+## Quick graphs
+
+This section contains some graphs to make visual assesment of the data structure. Preliminary visualization revealed some interesting patterns that could be interesting for further analysis.
+
+```{r}
+
+# Simple barplot to see distribution of data for different region. 
+barplot(table(gm_verbatim$region))
+
+# Plot to see change in income over time, for each region
+ggplot(gm_verbatim, aes(x = Year, y = income, col = region, fill = region)) +
+  geom_point(alpha = 0.2) +
+  facet_wrap(. ~ region)
+
+# Plot to see change in life expectancy over the years, for each region
+ggplot(gm_verbatim, aes(x = Year, y = life, col = region, fill = region)) + 
+  geom_point(alpha = 0.2) + 
+  facet_wrap(. ~ region)
+
+# Classic plot to see correlation between income and life expectancy, for each egion
+ggplot(gm_verbatim, aes(x = life, y = log(income), col = region, fill = region)) +
+  geom_point(alpha = 0.2) +
+  facet_wrap(. ~ region)
+
+```
+
+Observations:
+
+1. South Asia has the least number of records.
+2. Some regions have experiened explosive growth in income during the second half of XX century (Middle East, East Asia and, more evenly, Europe)
+3. Data for life expectancy is strange - seems like until the beginning of XX century there were next to none records on life expectancy and those missing values were substituted by fixed numbers (see uniform horizontal lines for most of the countries before 1900th)
+4. There is some correlation between income and length of life (kind of expected). THe area and the shape of those blobs might tell about dynamics, too.
+
+## Data preparation
+
+Since there were some issues spotted with the original data, I made a few changes. 
+
+```{r}
+gmt <- as_tibble(gm_verbatim) # Why not to make a tibble?
+gmt$population <- as.numeric(levels(gmt$population))[gmt$population] # Found in the internet - converted factors into numbers
+gmt <- gmt[!(gmt$Country =="Ã.land"),] # Deleted the weirdo
+
+```
+
+1. A tibble is considered to be an improvement over traditional data frame. So, I made a tibble from my existing data.
+2. Changed the type of the population column to "numeric". Empty cells became NA's.
+3. Decided to delete that clear outlier with non-legible name
+
+## Graphs
+
+Preliminary work - I made a function that displays large numbers using conventional format for exponents (as accepted by the scientific society).
+
+```{r}
+fancy_scientific <- function(l) {
+  l <- format(l, scientific = TRUE) # turn in to character string in scientific notation
+  l <- gsub("0e\\+00","0",l) # proper zero display
+  l <- gsub("^(.*)e", "'\\1'e", l) # quote the part before the exponent to keep all the digits
+  l <- gsub("e\\+","e",l) # remove "+" sign in the exponent notation
+  l <- gsub("\\'1[\\.0]*\\'\\%\\*\\%", "", l) # conventional sci-journal format
+  l <- gsub("e", "%*%10^", l) # turn the 'e+' into plotmath format
+  parse(text=l) # return this as an expression
+}
+```
+
+## Questions
+
+The following section contains a few questions that I found nteresting to look into. 
+
+### How did population change over time?
+
+Now, when Population column is numeric, we can see trends. As an option, NA's can be substituted with averages of existing values, but it does not seem to be necessary.
+The graph below shows growth of the population over time. We can spot exponential nature of that growth, as well as a few clear leaders - apparently, India and China. Interestingly, there are a few fast-growing countries that do not have populataion data after ~1975. 
+
+
+```{r}
+
+ggplot(gmt, aes(x = Year, y = population, col = region, fill = region)) +
+  geom_point() +
+  facet_wrap(. ~ region) +
+  ggtitle("Population change over time for different regions") +
+  scale_y_continuous(name="Population", labels=fancy_scientific) + # Here is the function used to get those neat numbers
+  scale_x_continuous(name="Year") +
+  theme(legend.position = "none") # Removed legend to improve clarity
+
+```
+
+### The first half of XX century was very hectic, especially for Europe. What was the impact on life expectancy?
+
+We know that the beginning of XX century was marked with several wars, economic downturns and periods of famine. I wanted to see, if data contains indication of those events. I've selected a few countries in the European region, semi-arbitrarily. Clearly, WWI and WWII had a huge impact on life expectancy (we can say by looking at major dips around 1915th and 1940th). It's pretty interesting how Russia cathed up other Europen countries in terms of length of life.
+
+```{r}
+
+gmt %>%
+  filter(Year >= 1840 & Year <= 1960 & Country == c("France","Germany","Italy","Russia","Turkey")) %>%
+  ggplot() +
+  geom_smooth(mapping = aes(x = Year, y = life, col = Country), se= FALSE, size = 1.2, span = 0.25, na.rm = FALSE) + # Light smoothing to make lines appear less chopped
+  scale_colour_brewer(palette = "Dark2") + # Using a better palettes for the output
+  ggtitle("Life expectancy change in the beginning of XX century (Europe & C.Asia)") +
+  scale_y_continuous(name="Life Expectancy") +
+  scale_x_continuous(name="Year") +
+  theme(legend.position = "bottom")
+
+```
+
+### Russia's history is of my particular interest. How did life expectancy in Russia change in XIX-XX centuries?
+
+Speaking about Russia, I decided to take a look on a bit more broader window of time. We can see that rapid growth after WWII quickly reached a plato around 1960-ies. The dip associated to the collapse of the USSR is also easy to spot. Lastly, seems like 1870-ies is the period when more accurate demographic statistics has become available. 
+
+```{r}
+
+gmt %>% filter(Year >= 1840 & Country == "Russia") %>%
+  ggplot() +
+  geom_line(mapping = aes(x = Year,y = life), size = 2, color='steelblue') +
+  ggtitle("Life expectancy in Russia in XIX-XX centuries") +
+  labs(y = "Life Expectancy", x = "Year")
+
+```
+
+### Income
+
+Lastly, I wanted to see changes in economic development across the globe.  
+
+```{r}
+
+MidYears <- c(1850, 1900, 1950, 2000)
+
+#gmt %>%
+#  filter(Year == MidYears) %>%
+#  ggplot() + 
+#  geom_histogram(mapping = aes(x = income), binwidth = 1500, color = "blue") +
+#  facet_wrap(. ~ Year) +
+#  ggtitle("Distribution of income across all countries every 50 years") +
+#  scale_y_continuous(name="# of countries") +
+#  scale_x_continuous(name="Income") +
+#  theme(legend.position = "none")
+
+```
+
+First histogram plot was supposed to reveal a distribution in income globally at 4 reference points in time: 1850, 1900, 1950 and 2000. It became clear that the distribution has very long tail, so that it's hard to see anything except for a couple of blobs close to zero. So, I decided to artificially make a cutoff at 20,000 and see any patterns. 
+
+```{r}
+gmt %>%
+  filter(Year == MidYears & income <= 20000) %>%
+  ggplot() + 
+  geom_histogram(mapping = aes(x = income), binwidth = 500, color = "steelblue") +
+  facet_wrap(. ~ Year) +
+  ggtitle("Distribution of income across all countries every 50 years") +
+  scale_y_continuous(name="# of countries") +
+  scale_x_continuous(name="Income") +
+  theme(legend.position = "none")
+```
+
+This diagram is more in line with my expectations. In 1850 all countries were sitting together very close to 0. But over time, we can see that the distribution was spreading more and more. 
+So, I became curious, if the same countries have been having spots as the most wealthiest in the world. 
+
+```{r}
+
+gmt_topI <- gmt %>%
+  select(Country, income, Year) %>% # Take only three variables in question
+  group_by(Year) %>% # Grouping by year
+  top_n(10, wt = income) # For each group = year = I took top 10 countries by income
+
+#==========Below are 4 similar bar plots depicting Top 10 countries at each of our reference points===========
+
+plot1850 <- gmt_topI %>% 
+  filter(Year == 1850) %>%
+  ggplot(aes(x = reorder(Country, -income),y = income, fill = Country)) +
+  geom_col(width = 0.65) +
+  geom_text(aes(label = Country), position = position_stack(vjust = 0.5), size = 2.75, colour = 'black', angle = 90) +
+  ggtitle("1850") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(name = "Income") +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.text.x = element_blank()) +
+  theme(legend.position = "none")
+
+plot1900 <- gmt_topI %>% 
+  filter(Year == 1900) %>%
+  ggplot(aes(x = reorder(Country, -income),y = income, fill = Country)) +
+  geom_col(width = 0.65) +
+  geom_text(aes(label = Country), position = position_stack(vjust = 0.5), size = 2.75, colour = 'black', angle = 90) +
+  ggtitle("1900") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(name = "Income") +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.text.x = element_blank()) +
+  theme(legend.position = "none")
+
+plot1950 <- gmt_topI %>% 
+  filter(Year == 1950) %>%
+  ggplot(aes(x = reorder(Country, -income),y = income, fill = Country)) +
+  geom_col(width = 0.65) +
+  geom_text(aes(label = Country), position = position_stack(vjust = 0.5), size = 2.75, colour = 'black', angle = 90) +
+  ggtitle("1950") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(name = "Income") +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.text.x = element_blank()) +
+  theme(legend.position = "none")
+
+plot2000 <- gmt_topI %>% 
+  filter(Year == 2000) %>%
+  ggplot(aes(x = reorder(Country, -income),y = income, fill = Country)) +
+  geom_col(width = 0.65) +
+  geom_text(aes(label = Country), position = position_stack(vjust = 0.5), size = 2.75, colour = 'black', angle = 90) +
+  ggtitle("2000") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(name = "Income") +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.text.x = element_blank()) +
+  theme(legend.position = "none")
+
+grid.arrange(plot1850, plot1900, plot1950, plot2000, ncol = 4,top = textGrob("Top 10 countries by income every 50 years", gp = gpar(fontsize = 16, font = 3))) # This command allows to put all four graps next to each other for easier comparison.
+
+```
+
+Well, this graph can still be improved in many ways, but I decided not to go down the rabbit hole :)
+
+Findings:
+
+1. European countries clearly dominated for a very long time.
+2. Income of the leading countries grew 2-3x every 50 years.
+3. Somehow, Uruguay made it to the list two times - 1850 and 1900 (Big surprise)
+4. In the mid of XX century, Middle East countries started taking over spots in the Top list - presumably, because of oil trade.
+5. US always were among the top (always = for the period of observation), but never made it to 1-3 places.
+
+
+By 1950, Brunei was very close to the point of 60k in income. So, I wanted to look when and what countries have reached that mark and what has happened over time.
+
+
+```{r}
+gmt %>%
+  filter(income > 60000) %>%
+  ggplot(aes(x = Year, y = income, color = Country)) + 
+  geom_line(size = 2) +
+  scale_colour_brewer(palette = "Set3") + 
+  ggtitle("Wealthiest countries - overview") +
+  labs(x="Year", y="Income (60k - cutoff)") +
+  theme(legend.position = "bottom")
+```
+
+Clearly, the golden era for those Middle East countries happened around 1970-1980-ies. Huge income, phenomenal growth rate and not less phenomenal decline. Nonetheless, those middle-eastern countries are still in the top, so we will see how the history will unwrap.
+
+
+Finally, I wanted to understand the current state of the world economy (current - as data permits). 
+
+```{r}
+
+gmt %>%
+  filter(Year == 2015) %>%
+  arrange(region) %>%
+  ggplot(aes(x = region, y = income, color = region)) +
+  geom_boxplot(outlier.colour = "steelblue", outlier.shape = 1) +
+  coord_flip() +
+  ggtitle("Distribution of income across different regions (as of 2015)") +
+  scale_y_continuous(name="Income", labels=fancy_scientific) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "none")
+
+```
+
+As we can see, Africa is still very poor, with a handful of countries managed to live well, though.
+Middle East, as we noted, is rich but has the most disperse distribution of income, with a median below that of Europe. 
+Europe has the most balanced distribution, thanks to EU, apparently. 
+
+
+
+
