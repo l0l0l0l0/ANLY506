@@ -30,17 +30,11 @@ Within the download you'll find the following directories and files, logically g
 ```text
 l0l0l0l0/
     ├── Code/
-    │   ├── code_1.r
-    │   ├── code_2.r
-    │   └── code_3.r
+    │   └── Final_Project.Rmd
     ├── Data/
-    │   ├── data.csv
-    │   ├── data.xlsx
-    │   └── data.r
+    │   └── gm.csv
     ├── Figures/
-    │   ├── figure1.png
-    │   ├── figure3.png
-    │   └── figure2.png
+    │   └── Fina_Project.html
     ├── Portfolio/
     │   ├── ANLY_506_Code_Portfolio.Rproj
     │   ├── Data_Analysis.Rmd
